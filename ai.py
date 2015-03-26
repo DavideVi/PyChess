@@ -5,6 +5,7 @@ class AIPlayer:
 
 	def __init__(self, difficulty):
 		self.movesAhead = difficulty
+		self.boardAssessmentCache = []
 
 
 	def performMove(self, board):		
@@ -35,6 +36,8 @@ class AIPlayer:
 				# Check how good the situation is after each move
 				(newOffenceRate, newRiskRate, newSelfStrength, newEnemyStrength, newPossibleMoves) =  self.assessBoard(imaginaryBoard)
 			
+				possibleResults.append((newOffenceRate, newRiskRate, newSelfStrength, newEnemyStrength))
+
 				# For all possible player moves
 				for newMove in newPossibleMoves:
 
@@ -59,16 +62,16 @@ class AIPlayer:
 		(bestMoveOffence, bestMoveRisk, bestMoveSStrength, bestMoveEStrength) = (-9999, 9999, -9999, 9999)
 
 		for move in moveResults:
-			(avgOff, avgRisk, avgSStr, avgEStr) = (0,0,0,0)
+			(avgOff, avgRisk, avgSStr, avgEStr) = (0.0,0.0,0.0,0.0)
 			for (t1, t2, t3, t4) in move[1]:
-				avgOff += t1
-				avgRisk += t2
-				avgSStr += t3
-				avgEStr += t4
+				avgOff += float(t1)
+				avgRisk += float(t2)
+				avgSStr += float(t3)
+				avgEStr += float(t4)
 			(avgOff, avgRisk, avgSStr, avgEStr) = (avgOff / len(move[1]), avgRisk / len(move[1]), avgSStr / len(move[1]), avgEStr / len(move[1]))
 			
 			# Update best move
-			if (self.compareSituation((bestMoveOffence, bestMoveRisk, bestMoveSStrength, bestMoveEStrength), (newOffenceRate, newRiskRate, newSelfStrength, newEnemyStrength))):
+			if self.compareSituation((bestMoveOffence, bestMoveRisk, bestMoveSStrength, bestMoveEStrength), (avgOff, avgRisk, avgSStr, avgEStr)) is 1:
 				bestMoveIndex = moveResults.index(move)
 				bestMoveOffence = avgOff
 				bestMoveRisk = avgRisk
@@ -83,28 +86,37 @@ class AIPlayer:
 
 		# Second is better if improvement is greater than loss
 
-		improvement = 0
-		loss = 0
+		improvement = 0.0
+		loss = 0.0
+
+		scalingOffence = 0.2
+		scalingRisk = 0.2
+		scalingSStr = 0.4
+		scalingEStr = 0.2
 
 		diffOffence = secondOffence - firstOffence
+		diffOffence = diffOffence + diffOffence * scalingOffence
 		if (diffOffence > 0):
 			improvement += diffOffence
 		else:
 			loss += abs(diffOffence)
 
 		diffRisk = secondRisk - firstRisk
+		diffRisk = diffRisk + diffRisk * scalingRisk
 		if (diffRisk < 0):
 			improvement += abs(diffRisk)
 		else:
 			loss += diffRisk
 
 		diffSStr = secondSStr - firstSStr
+		diffSStr = diffSStr + diffSStr * scalingSStr
 		if (diffSStr > 0):
 			improvement += diffSStr
 		else:
 			loss += abs(diffSStr)
 
 		diffEStr = secondEStr - firstEStr
+		diffEStr = diffEStr + diffEStr * scalingEStr
 		if (diffEStr < 0):
 			improvement += abs(diffEStr)
 		else:
@@ -116,6 +128,13 @@ class AIPlayer:
 		return 0
 
 	def assessBoard(self, board):
+
+		name = self.boardToString(board)
+
+		for cache in self.boardAssessmentCache:
+			if cache[0] is name:
+				return cache[1]
+
 		offenceRate = 0
 		riskRate = 0
 		selfStrengthRate = 0
@@ -144,7 +163,18 @@ class AIPlayer:
 				elif cellOwner is 2:
 					selfStrengthRate += value
 
+		self.boardAssessmentCache.append([name, (offenceRate, riskRate, selfStrengthRate, enemyStrengthRate, possibleMoves)])
+
 		return (offenceRate, riskRate, selfStrengthRate, enemyStrengthRate, possibleMoves)
+
+	def boardToString(self, board):
+		result = ""
+		for column in board.board:
+			for row in board.board:
+				for cell in row:
+					result += cell
+
+		return result
 
 	def getPieceValue(self, piece):
 		if 'p' in piece:

@@ -214,7 +214,6 @@ class GameBoard:
 							pass
 			return 1
 
-	# NOT IMPLEMENTED
 	def arePiecesInBetween(self, fromColumn, fromRow, toColumn, toRow):
 
 		# Check straight
