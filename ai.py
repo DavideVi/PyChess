@@ -98,7 +98,6 @@ class AIPlayer:
 
 		return (offenceRate, riskRate, selfStrengthRate, enemyStrengthRate, possibleMoves)
 
-	# NOT IMPLEMENTED
 	def getPieceValue(self, piece):
 		if 'p' in piece:
 			return 1
