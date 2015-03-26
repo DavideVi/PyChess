@@ -5,7 +5,7 @@ from ai import AIPlayer
 
 # Main program logic
 board = GameBoard()
-enemy = AIPlayer(2, 2)
+enemy = AIPlayer(1)
 
 board.newGame()
 
@@ -22,6 +22,10 @@ while 1:
 		validMove = board.performPlayerMove(raw_input())
 
 	#TODO: Check if check or check mate
+
+	# UI 
+	os.system("clear")
+	board.drawBoard()
 
 	# AI Move
 	enemy.performMove(board)

@@ -210,7 +210,7 @@ class GameBoard:
 							cell = self.getPosition(i, j)
 							if 'K' in cell and self.getPlayerFromPiece(cell) is enemy:
 								raise MoveError("Move is too close to enemy king")
-						except ValueError as e:
+						except IndexError as e:
 							pass
 			return 1
 
@@ -327,8 +327,8 @@ class GameBoard:
 					try: 
 						if self.isMoveValid(column, row, newCol, newRow):
 							validMoves.append([column, row, newCol, newRow])
-						except MoveError:
-							pass
+					except MoveError:	
+						pass
 
 		return validMoves
 

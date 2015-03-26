@@ -3,62 +3,115 @@ from board import GameBoard
 
 class AIPlayer:
 
-	def __init__(self, difficulty, enemyType):
+	def __init__(self, difficulty):
 		self.movesAhead = difficulty
-		self.personality = enemyType
-
-		# 1 - Suicide Aggressive
-		# 2 - Cautious Aggressive
 
 
-	def performMove(self, board):
-		
+	def performMove(self, board):		
+		self.performBestMove(board, 0)
+
+	def performBestMove(self, board, currentDepth):
+
 		(currentOffence, currentRisk, selfStrength, enemyStrength, possibleMoves) =  self.assessBoard(board)
 
-		# TODO: Assess all moves up to self.movesAhead
-		# perform the one with best score
+		if currentDepth is self.movesAhead:
+			return (currentOffence, currentRisk, selfStrength, enemyStrength)
 
-		bestMoveIndex = -1
-		bestMoveOffence = -9999
-		bestMoveRisk = 9999
-		bestMoveSStrength = -9999
-		bestMoveEStrength = 9999
+		moveResults = []
 
+		# For all possible moves
 		for move in possibleMoves:
 			imaginaryBoard = GameBoard()
 			imaginaryBoard.loadGame(board.board)
+
+			# If the moves are for the AI
 			if imaginaryBoard.getPlayerFromPosition(move[0], move[1]) is 2:
+				
+				possibleResults = []
+
+				# Perform every possible AI move
 				imaginaryBoard.movePiece(move[0], move[1], move[2], move[3])
 
+				# Check how good the situation is after each move
 				(newOffenceRate, newRiskRate, newSelfStrength, newEnemyStrength, newPossibleMoves) =  self.assessBoard(imaginaryBoard)
+			
+				# For all possible player moves
+				for newMove in newPossibleMoves:
 
-				if (self.compareMoveScoring((bestMoveOffence, bestMoveRisk, bestMoveSStrength, bestMoveEStrength), (newOffenceRate, newRiskRate, newSelfStrength, newEnemyStrength))):
-					bestMoveIndex = possibleMoves.index(move)
-					bestMoveOffence = newOffenceRate
-					bestMoveRisk = newRiskRate
-					bestMoveSStrength = newSelfStrength
-					bestMoveEStrength = newEnemyStrength
+					newImaginaryBoard = GameBoard()
+					newImaginaryBoard.loadGame(imaginaryBoard.board)
 
-		bestMove = possibleMoves[bestMoveIndex]
+					# Perform all possible player moves
+					if newImaginaryBoard.getPlayerFromPosition(newMove[0], newMove[1]) is 1:
+
+						newImaginaryBoard.movePiece(move[0], move[1], move[2], move[3])
+
+						possibleResults.append(self.performBestMove(newImaginaryBoard, currentDepth + 1))
+
+				if currentDepth is not 0:
+					return possibleResults
+				else:
+					moveResults.append([move, possibleResults])
+
+		# TODO: Go through all move results, check best outcome, perform move
+
+		bestMoveIndex = - 1
+		(bestMoveOffence, bestMoveRisk, bestMoveSStrength, bestMoveEStrength) = (-9999, 9999, -9999, 9999)
+
+		for move in moveResults:
+			(avgOff, avgRisk, avgSStr, avgEStr) = (0,0,0,0)
+			for (t1, t2, t3, t4) in move[1]:
+				avgOff += t1
+				avgRisk += t2
+				avgSStr += t3
+				avgEStr += t4
+			(avgOff, avgRisk, avgSStr, avgEStr) = (avgOff / len(move[1]), avgRisk / len(move[1]), avgSStr / len(move[1]), avgEStr / len(move[1]))
+			
+			# Update best move
+			if (self.compareSituation((bestMoveOffence, bestMoveRisk, bestMoveSStrength, bestMoveEStrength), (newOffenceRate, newRiskRate, newSelfStrength, newEnemyStrength))):
+				bestMoveIndex = moveResults.index(move)
+				bestMoveOffence = avgOff
+				bestMoveRisk = avgRisk
+				bestMoveSStrength = avgSStr
+				bestMoveEStrength = avgEStr
+
+		bestMove = moveResults[bestMoveIndex][0]
 		board.movePiece(bestMove[0], bestMove[1], bestMove[2], bestMove[3])
 
-	def compareMoveScoring(self, (firstOffence, firstRisk, firstSStr, firstEStr), (secondOffence, secondRisk, secondSStr, secondEStr) ):
+	# Returns 1 if second is better
+	def compareSituation(self, (firstOffence, firstRisk, firstSStr, firstEStr), (secondOffence, secondRisk, secondSStr, secondEStr) ):
 
-		# Suicide Agressive 
-		if self.personality is 1:
-			pass
+		# Second is better if improvement is greater than loss
 
-		# Cautious Agressive
-		elif self.personality is 2:
+		improvement = 0
+		loss = 0
 
-			if (secondEStr < firstEStr) and (secondRisk <= firstRisk):
-				return 1
-			elif (secondSStr >= firstEStr) and (secondOffence >= firstOffence):
-				return 1
-			elif (secondEStr < firstEStr) and (secondRisk >= firstRisk) and (secondOffence > firstOffence):
-				return 1
-			elif (secondRisk < firstRisk):
-				return 1
+		diffOffence = secondOffence - firstOffence
+		if (diffOffence > 0):
+			improvement += diffOffence
+		else:
+			loss += abs(diffOffence)
+
+		diffRisk = secondRisk - firstRisk
+		if (diffRisk < 0):
+			improvement += abs(diffRisk)
+		else:
+			loss += diffRisk
+
+		diffSStr = secondSStr - firstSStr
+		if (diffSStr > 0):
+			improvement += diffSStr
+		else:
+			loss += abs(diffSStr)
+
+		diffEStr = secondEStr - firstEStr
+		if (diffEStr < 0):
+			improvement += abs(diffEStr)
+		else:
+			loss += diffEStr
+
+		if improvement > loss:
+			return 1
 
 		return 0
 
@@ -90,11 +143,6 @@ class AIPlayer:
 					enemyStrengthRate += value
 				elif cellOwner is 2:
 					selfStrengthRate += value
-
-		''' 
-		Foreach piece, get all valid moves, calculate which ones
-		are in danger of being taken, extract values 
-		'''
 
 		return (offenceRate, riskRate, selfStrengthRate, enemyStrengthRate, possibleMoves)
 
